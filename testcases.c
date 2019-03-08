@@ -284,9 +284,10 @@ void test18() {
 
 // Create 9 threads
 void createThreads(int t) {
-  int i;
+  int i, t2;
   for (i = 0; i < MAXTHREADS-1; i++) {
-    create_thread(threadPrintNoYield, get_thread());
+    t2 = create_thread(threadPrintNoYield, get_thread());
+    Printf("Thread %d created thread %d\n", get_thread(), t2);
   }
   
   threadPrintNoYield(0);
