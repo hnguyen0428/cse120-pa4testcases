@@ -101,7 +101,7 @@ void test5() {
   exit_thread();
 }
 
-// Test MAXTHREADS, printing in the order 10 9 8 7 ...
+// Test MAXTHREADS, printing in the order 9 8 7 ...
 void test6() {
   int i, t;
   t = get_thread();
