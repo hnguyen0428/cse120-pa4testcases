@@ -382,7 +382,7 @@ void m_threadPrintYield(int t) {
     Printf("Thread %d resumed by thread %d\n", get_thread(), yielder);
 
     if (!checkZeros(mem, 8192))
-      Printf("Stack memory has been tampered with\n");
+      Printf("Stack memory has been tampered with by another thread\n");
   }
 }
 
