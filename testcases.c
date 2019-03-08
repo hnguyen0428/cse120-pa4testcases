@@ -26,6 +26,7 @@ void threadPrintSched(int);
 void m_threadPrintSched(int);
 void threadPrintOnce(int);
 void threadExit(int);
+int checkZeros(char arr[], int size);
 
 
 static struct option opts[] = {
@@ -367,19 +368,20 @@ void threadPrintYield(int t) {
 }
 
 // Thread uses some memory
+// If you set STACKSIZE to 8192, you should fail this case, since a thread
+// can run into another thread above
 void m_threadPrintYield(int t) {
   int i, yielder;
   char mem[8192];
   memset(&mem, 0, sizeof mem);
-  if ((int) &mem[8191] - (int) &mem[0] + 1 != 8192) {
-    Printf("Memory allocation failed\n");
-    Exit();
-  }
 
   for (i = 0; i < NUMYIELDS; i++) {
     Printf("T%d: iteration %d\n", get_thread(), i);
     yielder = yield_thread(t);
     Printf("Thread %d resumed by thread %d\n", get_thread(), yielder);
+
+    if (!checkZeros(mem, 8192))
+      Printf("Stack memory has been tampered with\n");
   }
 }
 
@@ -402,14 +404,13 @@ void m_threadPrintSched(int t) {
   int i;
   char mem[8192];
   memset(&mem, 0, sizeof mem);
-  if ((int) &mem[8191] - (int) &mem[0] + 1 != 8192) {
-    Printf("Memory allocation failed\n");
-    Exit();
-  }
 
   for (i = 0; i < NUMYIELDS; i++) {
     Printf("T%d: iteration %d\n", get_thread(), i);
     sched_thread();
+    
+    if (!checkZeros(mem, 8192))
+      Printf("Stack memory has been tampered with by another thread\n");
   }
 }
 
@@ -422,6 +423,16 @@ void threadPrintOnce(int t) {
 void threadExit(int t) {
   Printf("Thread %d is exiting\n", get_thread());
   exit_thread();
+}
+
+int checkZeros(char arr[], int size) {
+  int i;
+  for (i = 0; i < size; i++) {
+    if (arr[i] != 0) {
+      return 0;
+    }
+  }
+  return 1;
 }
 
 
