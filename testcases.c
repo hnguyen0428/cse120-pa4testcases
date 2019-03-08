@@ -3,6 +3,7 @@
 #include "aux.h"
 #include "umix.h"
 #include "mycode4.h"
+#include <string.h>
 
 static void (*init_threads)() = MyInitThreads;
 static int (*create_thread)(void (*f)(), int) = MyCreateThread;
@@ -15,10 +16,14 @@ static void (*exit_thread)() = MyExitThread;
 #define NUMYIELDS 5
 void createThreads(int);
 void createThreadsYield(int);
+void m_createThreadsYield(int);
 void createThreadsSched(int);
+void m_createThreadsSched(int);
 void threadPrintYield(int);
+void m_threadPrintYield(int);
 void threadPrintNoYield(int);
 void threadPrintSched(int);
+void m_threadPrintSched(int);
 void threadPrintOnce(int);
 void threadExit(int);
 
@@ -223,6 +228,57 @@ void test14() {
 }
 
 
+// Test 15, 16, 17, 18 are similar to 4, 5, 8, 9, but use a version of a
+// the print function that allocates some stack memory
+// This tests to see if stack space was allocated correctly and that the 
+// memory of a thread's stack below won't overwrite the memory of a thread's 
+// stack above
+void test15() {
+  int me, t1, t2, t3, t4;
+
+  me = get_thread();
+  t1 = create_thread(m_threadPrintYield, me);
+  t2 = create_thread(m_threadPrintYield, t1);
+  t3 = create_thread(m_threadPrintYield, t2);
+  t4 = create_thread(m_threadPrintYield, t3);
+
+  yield_thread(t4);
+  m_threadPrintYield(t4);
+  exit_thread();
+}
+
+void test16() {
+  int me, t1, t2, t3, t4;
+
+  me = get_thread();
+  t1 = create_thread(m_threadPrintSched, 0);
+  t2 = create_thread(m_threadPrintSched, 0);
+  t3 = create_thread(m_threadPrintSched, 0);
+  t4 = create_thread(m_threadPrintSched, 0);
+
+  m_threadPrintSched(me);
+  exit_thread();
+}
+
+void test17() {
+  int t, me; 
+  me = get_thread();
+
+  t = create_thread(m_createThreadsYield, me);
+  m_threadPrintYield(t);
+  exit_thread();
+}
+
+void test18() {
+  int t, me;
+  me = get_thread();
+
+  t = create_thread(m_createThreadsSched, me);
+  m_threadPrintSched(t);
+  exit_thread();
+}
+
+
 // Print functions
 
 // Create 9 threads
@@ -258,6 +314,27 @@ void createThreadsYield(int t) {
   }
 }
 
+void m_createThreadsYield(int t) {
+  // Change this number to change the number of threads getting created
+  // 3 will end up creating 5 threads in total (since 0 creates 1, so 1 will 
+  // only need to create 3 more threads)
+  static int numThreads = 3;
+  int t2 = -1;
+
+  if (numThreads != 0) {
+    t2 = create_thread(m_createThreadsYield, get_thread());
+    numThreads--;
+  }
+
+  if (t2 != -1) {
+    m_threadPrintYield(t2);
+  }
+  else {
+    // Last thread created yields to thread 0
+    m_threadPrintYield(0);
+  }
+}
+
 void createThreadsSched(int t) {
   static int numThreads = 3;
 
@@ -269,8 +346,36 @@ void createThreadsSched(int t) {
   threadPrintSched(t);
 }
 
+void m_createThreadsSched(int t) {
+  static int numThreads = 3;
+
+  if (numThreads != 0) {
+    create_thread(m_createThreadsSched, get_thread());
+    numThreads--;
+  }
+
+  m_threadPrintSched(t);
+}
+
 void threadPrintYield(int t) {
   int i, yielder;
+  for (i = 0; i < NUMYIELDS; i++) {
+    Printf("T%d: iteration %d\n", get_thread(), i);
+    yielder = yield_thread(t);
+    Printf("Thread %d resumed by thread %d\n", get_thread(), yielder);
+  }
+}
+
+// Thread uses some memory
+void m_threadPrintYield(int t) {
+  int i, yielder;
+  char mem[8192];
+  memset(&mem, 0, sizeof mem);
+  if ((int) &mem[8191] - (int) &mem[0] + 1 != 8192) {
+    Printf("Memory allocation failed\n");
+    Exit();
+  }
+
   for (i = 0; i < NUMYIELDS; i++) {
     Printf("T%d: iteration %d\n", get_thread(), i);
     yielder = yield_thread(t);
@@ -293,6 +398,21 @@ void threadPrintSched(int t) {
   }
 }
 
+void m_threadPrintSched(int t) {
+  int i;
+  char mem[8192];
+  memset(&mem, 0, sizeof mem);
+  if ((int) &mem[8191] - (int) &mem[0] + 1 != 8192) {
+    Printf("Memory allocation failed\n");
+    Exit();
+  }
+
+  for (i = 0; i < NUMYIELDS; i++) {
+    Printf("T%d: iteration %d\n", get_thread(), i);
+    sched_thread();
+  }
+}
+
 void threadPrintOnce(int t) {
   Printf("T%d prints\n", get_thread());
   sched_thread();
@@ -305,9 +425,9 @@ void threadExit(int t) {
 }
 
 
-#define NUMTESTS 14
+#define NUMTESTS 18
 void (*tests[])() = {test1, test2, test3, test4, test5, test6, test7, test8, 
-test9, test10, test11, test12, test13, test14};
+test9, test10, test11, test12, test13, test14, test15, test16, test17, test18};
 
 void usage(char* argv[]) {
   Printf(
