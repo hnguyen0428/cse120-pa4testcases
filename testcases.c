@@ -315,6 +315,22 @@ void test20() {
   exit_thread();
 }
 
+// Test return value for when you are not able to create more threads because
+// there are MAXTHREADS in use
+void test21() {
+  int i, t;
+  t = get_thread();
+  for (i = 1; i < MAXTHREADS; i++) {
+    t = create_thread(threadPrintSched, t);
+  }
+
+  // Should not be able to create more thread
+  t = create_thread(threadPrintSched, t);
+  Printf("Expected return value: %d, Actual return value: %d\n",
+          -1, t);
+  exit_thread();
+}
+
 void testStackMem(int t) {
   // &t is approximately where the stack pointer of this thread starts
   if ((int) &t + STACKSIZE / 2 >  (int) s) {
