@@ -5,6 +5,8 @@
 #include "mycode4.h"
 #include <string.h>
 
+#define STACKSIZE 65536
+
 static void (*init_threads)() = MyInitThreads;
 static int (*create_thread)(void (*f)(), int) = MyCreateThread;
 static int (*yield_thread)(int) = MyYieldThread;
@@ -293,6 +295,38 @@ void test19() {
   exit_thread();
 }
 
+// Thread 0 uses a lot of stack memory before calling create.
+// Thread 1's stack must still start at -STACKSIZE, but if implementation
+// did not account for the stack pointer in the middle of thread 0 already,
+// then thread 1'stack could start at ~ -STACKSIZE-STACKSIZE/2
+char* s;
+void testStackMem(int);
+void test20() {
+  char stack[STACKSIZE/2];
+  if ((int) &stack[STACKSIZE/2 - 1] - (int) &stack[0] + 1 != STACKSIZE/2) {
+    Printf("Stack allocation failed\n");
+    Exit();
+  }
+  
+  s = (char*)((int)&stack[0] - STACKSIZE/2); // Address where thread 1 starts
+
+  create_thread(testStackMem, 0);
+  yield_thread(1);
+  exit_thread();
+}
+
+void testStackMem(int t) {
+  // &t is approximately where the stack pointer of this thread starts
+  if ((int) &t + STACKSIZE / 2 >  (int) s) {
+    Printf("Reserved stack space was allocated properly\n");
+  }
+  else {
+    Printf("Stack pointer of thread %d is lower than expected.\n", get_thread());
+  }
+  // If you uncomment this and print out the difference, it should be very
+  // close to 32768 (within ~200)
+  //Printf("Difference in stack pointer: %d\n", ((int) &t + STACKSIZE/2) - (int) s);
+}
 
 // Print functions
 
@@ -451,10 +485,10 @@ int checkZeros(char arr[], int size) {
 }
 
 
-#define NUMTESTS 19
+#define NUMTESTS 20
 void (*tests[])() = {test1, test2, test3, test4, test5, test6, test7, test8, 
 test9, test10, test11, test12, test13, test14, test15, test16, test17, test18,
-test19};
+test19, test20};
 
 void usage(char* argv[]) {
   Printf(
