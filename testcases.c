@@ -279,6 +279,20 @@ void test18() {
   exit_thread();
 }
 
+// When the last id assigned is 2, if thread 2 exits and then we call
+// create thread. The new thread should be assigned 3, not 2.
+void test19() {
+  int me, t1, t2, t3;
+  me = get_thread();
+  t1 = create_thread(threadPrintSched, me);
+  t2 = create_thread(threadExit, t1);
+  yield_thread(t2);
+  t3 = create_thread(threadPrintSched, me);
+  Printf("Expected ID assigned: %d, Actual ID assigned\n", 3, t3);
+  threadPrintSched(0);
+  exit_thread();
+}
+
 
 // Print functions
 
@@ -437,9 +451,10 @@ int checkZeros(char arr[], int size) {
 }
 
 
-#define NUMTESTS 18
+#define NUMTESTS 19
 void (*tests[])() = {test1, test2, test3, test4, test5, test6, test7, test8, 
-test9, test10, test11, test12, test13, test14, test15, test16, test17, test18};
+test9, test10, test11, test12, test13, test14, test15, test16, test17, test18,
+test19};
 
 void usage(char* argv[]) {
   Printf(
