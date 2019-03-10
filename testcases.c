@@ -288,7 +288,7 @@ void test19() {
   t2 = create_thread(threadExit, t1);
   yield_thread(t2);
   t3 = create_thread(threadPrintSched, me);
-  Printf("Expected ID assigned: %d, Actual ID assigned\n", 3, t3);
+  Printf("Expected ID assigned: %d, Actual ID assigned %d\n", 3, t3);
   threadPrintSched(0);
   exit_thread();
 }
