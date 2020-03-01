@@ -72,6 +72,7 @@ void test3() {
   yield_thread(t);
 
   threadPrintYield(me);
+  threadPrintYield(t);
   exit_thread();
 }
 
@@ -125,7 +126,9 @@ void test7() {
     t = create_thread(threadPrintYield, 0);
   }
 
-  threadPrintSched(0);
+  for (i = 0; i < MAXTHREADS-1; i++) {
+    threadPrintSched(0);
+  }
   exit_thread();
 }
 
@@ -341,7 +344,7 @@ void testStackMem(int t) {
   }
   // If you uncomment this and print out the difference, it should be very
   // close to 32768 (within ~200)
-  //Printf("Difference in stack pointer: %d\n", ((int) &t + STACKSIZE/2) - (int) s);
+  // Printf("Difference in stack pointer: %d\n", ((int) &t + STACKSIZE/2) - (int) s);
 }
 
 // Print functions
